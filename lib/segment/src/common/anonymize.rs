@@ -4,69 +4,86 @@ use std::hash::{Hash, Hasher};
 
 use chrono::{DateTime, Utc};
 
+/// 匿名化trait。比如下面是对Person进行匿名话
+///
+/// ```
+/// struct Person {
+///     name: String,
+///     age: u32,
+/// }
+///
+/// impl Anonymize for Person {
+///     fn anonymize(&self) -> Self {
+///         Person {
+///             name: "Anonymous".to_string(),
+///             age: 0,
+///         }
+///     }
+/// }
+/// ```
 pub trait Anonymize {
-    fn anonymize(&self) -> Self;
+  fn anonymize(&self) -> Self;
 }
 
 impl<T: Anonymize> Anonymize for Option<T> {
-    fn anonymize(&self) -> Self {
-        self.as_ref().map(|t| t.anonymize())
-    }
+  fn anonymize(&self) -> Self {
+    self.as_ref().map(|t| t.anonymize())
+  }
 }
 
 impl<T: Anonymize> Anonymize for Vec<T> {
-    fn anonymize(&self) -> Self {
-        self.iter().map(|e| e.anonymize()).collect()
-    }
+  fn anonymize(&self) -> Self {
+    self.iter().map(|e| e.anonymize()).collect()
+  }
 }
 
 impl<T: Anonymize> Anonymize for Box<T> {
-    fn anonymize(&self) -> Self {
-        Box::new(self.as_ref().anonymize())
-    }
+  fn anonymize(&self) -> Self {
+    Box::new(self.as_ref().anonymize())
+  }
 }
 
-impl<K: Anonymize + Hash + Eq, V: Anonymize> Anonymize for HashMap<K, V> {
-    fn anonymize(&self) -> Self {
-        self.iter()
-            .map(|(k, v)| (k.anonymize(), v.anonymize()))
-            .collect()
-    }
+impl<K: Anonymize + Hash + Eq, V: Anonymize> Anonymize
+  for HashMap<K, V>
+{
+  fn anonymize(&self) -> Self {
+    self.iter().map(|(k, v)| (k.anonymize(), v.anonymize())).collect()
+  }
 }
 
-impl<K: Anonymize + Eq + Ord, V: Anonymize> Anonymize for BTreeMap<K, V> {
-    fn anonymize(&self) -> Self {
-        self.iter()
-            .map(|(k, v)| (k.anonymize(), v.anonymize()))
-            .collect()
-    }
+impl<K: Anonymize + Eq + Ord, V: Anonymize> Anonymize
+  for BTreeMap<K, V>
+{
+  fn anonymize(&self) -> Self {
+    self.iter().map(|(k, v)| (k.anonymize(), v.anonymize())).collect()
+  }
 }
 
 impl Anonymize for String {
-    fn anonymize(&self) -> Self {
-        let mut hasher = DefaultHasher::new();
-        self.hash(&mut hasher);
-        hasher.finish().to_string()
-    }
+  fn anonymize(&self) -> Self {
+    let mut hasher = DefaultHasher::new();
+    self.hash(&mut hasher);
+    hasher.finish().to_string()
+  }
 }
 
 impl Anonymize for usize {
-    fn anonymize(&self) -> Self {
-        let log10 = (*self as f32).log10().round() as u32;
-        if log10 > 4 {
-            let skip_digits = log10 - 4;
-            let coeff = 10usize.pow(skip_digits);
-            (*self / coeff) * coeff
-        } else {
-            *self
-        }
+  fn anonymize(&self) -> Self {
+    let log10 = (*self as f32).log10().round() as u32;
+    if log10 > 4 {
+      let skip_digits = log10 - 4;
+      let coeff = 10usize.pow(skip_digits);
+      (*self / coeff) * coeff
+    } else {
+      *self
     }
+  }
 }
 
 impl Anonymize for DateTime<Utc> {
-    fn anonymize(&self) -> Self {
-        let coeff: f32 = rand::random();
+  fn anonymize(&self) -> Self {
+    let coeff: f32 = rand::random();
 
-        *self + chrono::Duration::seconds(((coeff * 20.0) - 10.0) as i64)
-    }
+    *self + chrono::Duration::seconds(((coeff * 20.0) - 10.0) as i64)
+  }
 }
